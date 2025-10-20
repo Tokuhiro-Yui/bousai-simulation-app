@@ -98,7 +98,7 @@ export default function Home() {
 
   const handleSelect = () => {
     const otherItems = selectedItems.filter(item => item.id !== activeItem.id);
-    let newSelectedItems = [...otherItems];
+    const newSelectedItems = [...otherItems];
     if (currentQuantity > 0) {
       newSelectedItems.push({ id: activeItem.id, quantity: currentQuantity });
     }
