@@ -1,5 +1,20 @@
 'use client';
+// ▼▼▼▼▼ このブロックを貼り付ける ▼▼▼▼▼
+interface PlayerStatus {
+  satiety: number;
+  hydration: number;
+  hygiene: number;
+  morale: number;
+}
 
+interface ResultData {
+  selectedItems: { id: number; quantity: number }[];
+  gaugeHistory: PlayerStatus[];
+  '不足したアイテム': { id: string; name: string; reason: string; recommendation: string }[];
+  turnCount: number;
+  totalTurns: number;
+}
+// ▲▲▲▲▲ ここまで ▲▲▲▲▲
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Lightbulb } from 'lucide-react';
@@ -72,7 +87,7 @@ const gaugeSettings = {
 };
 
 export default function ResultPage() {
-  const [resultData, setResultData] = useState(null);
+  const [resultData, setResultData] = useState<ResultData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
