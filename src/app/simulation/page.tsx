@@ -187,7 +187,7 @@ export default function SimulationPage() {
         if(turnStep === 'decay') {
             const newDay = Math.floor((turnCount - 1) / 3) + 1;
             const turnIndex = (turnCount - 1) % 3;
-            const newTurn: Turn = ['朝', '昼', '夜'][turnIndex];
+            const newTurn: Turn = (['朝', '昼', '夜'] as const)[turnIndex];
             setDay(newDay);
             setTurn(newTurn);
 
