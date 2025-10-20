@@ -85,7 +85,7 @@ const gaugeSettings = {
   hygiene: { name: '衛生', color: '#16A34A' },
   morale: { name: '精神力', color: '#FBBF24' },
 };
-
+type GaugeKey = keyof typeof gaugeSettings;
 export default function ResultPage() {
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -131,15 +131,18 @@ export default function ResultPage() {
         <section className="bg-white p-6 rounded-2xl shadow-lg mb-8">
             <h2 className="text-2xl font-semibold mb-6">最終的な状況</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries({ satiety, hydration, hygiene, morale }).map(([key, value]) => (
-                    <div key={key} className="text-center">
-                        <p className="capitalize font-medium mb-2">{gaugeSettings[key].name}</p>
-                        <div className="w-full bg-gray-200 rounded-full h-4">
-                            <div className="h-4 rounded-full" style={{ width: `${value}%`, backgroundColor: gaugeSettings[key].color }}></div>
+               {Object.entries({ satiety, hydration, hygiene, morale }).map(([key, value]) => {
+                    const gaugeKey = key as GaugeKey;
+                    return (
+                        <div key={gaugeKey} className="text-center">
+                            <p className="capitalize font-medium mb-2">{gaugeSettings[gaugeKey].name}</p>
+                            <div className="w-full bg-gray-200 rounded-full h-4">
+                                <div className="h-4 rounded-full" style={{ width: `${value}%`, backgroundColor: gaugeSettings[gaugeKey].color }}></div>
+                            </div>
+                            <p className="font-bold text-lg mt-1">{value}%</p>
                         </div>
-                        <p className="font-bold text-lg mt-1">{value}%</p>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </section>
 
