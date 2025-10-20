@@ -112,7 +112,7 @@ export default function SimulationPage() {
             const itemIndex = newInventory.findIndex(item => item.id === itemId);
 
             if (itemIndex > -1) {
-                let item = { ...newInventory[itemIndex] };
+                const item = { ...newInventory[itemIndex] };
                 if (consumeType === 'quantity') {
                     item.quantity -= amount;
                 } else {
@@ -152,7 +152,7 @@ export default function SimulationPage() {
                 setOriginalSelection(selectedItems);
 
                 let waterTank = 0;
-                let tempInventory: InventoryItem[] = [];
+                const tempInventory: InventoryItem[] = [];
                 selectedItems.forEach(item => {
                     const details = getItemDetails(item.id);
                     if (!details) return;
