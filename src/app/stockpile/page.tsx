@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Plus, Minus, CheckCircle2, Loader2 } from 'lucide-react';
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -31,6 +31,12 @@ const categories: { id: 'all' | Item['category'], name: string }[] = [
 ];
 
 const MAX_SELECTED_ITEMS = 200;
+
+// ▼▼▼ 【修正】 数量1に制限する生活用品ID (28, 29, 33 を追加) ▼▼▼
+// (コンロ、バッテリー、ランタン、ラップ、ポリ袋、ガムテープ、給水袋、リュック)
+// (手袋、乾電池、カイロ)
+const singletonLifelineItems = [7, 8, 24, 26, 27, 28, 29, 30, 31, 32, 33];
+// ▲▲▲ 修正ここまで ▲▲▲
 
 // --- UIコンポーネント (変更なし) ---
 const EffectBadge = ({ effect, value }: { effect: 'satiety' | 'hydration' | 'hygiene' | 'morale', value: number }) => {
@@ -73,14 +79,22 @@ const RenderHeatingCost = ({ cost }: { cost?: HeatingCost }) => {
 
 export default function Home() {
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
-  const [activeItem, setActiveItem] = useState<Item>(allItems[0]);
+  const [activeItem, setActiveItem] = useState<Item>(allItems.find(item => item.id !== 9) || allItems[0]); // 初期アイテムが9でないことを確認
   const [currentQuantity, setCurrentQuantity] = useState(0);
   const [activeCategory, setActiveCategory] = useState<'all' | Item['category']>('all');
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
   const totalSelectedCount = useMemo(() => selectedItems.reduce((sum, item) => sum + item.quantity, 0), [selectedItems]);
-  const filteredItems = useMemo(() => activeCategory === 'all' ? allItems : allItems.filter(item => item.category === activeCategory), [activeCategory]);
+  
+  // (変更なし)
+  const filteredItems = useMemo(() => {
+    const baseList = activeCategory === 'all' 
+      ? allItems 
+      : allItems.filter(item => item.category === activeCategory);
+    // 手回し充電ラジオ(id: 9)を除外
+    return baseList.filter(item => item.id !== 9);
+  }, [activeCategory]);
 
   const handleItemClick = (item: Item) => {
     setActiveItem(item);
@@ -88,8 +102,27 @@ export default function Home() {
     setCurrentQuantity(found ? found.quantity : 0);
   };
 
+  // (変更なし) handleIncrease ロジック
   const handleIncrease = () => {
-    if (totalSelectedCount < MAX_SELECTED_ITEMS) setCurrentQuantity(prev => prev + 1);
+    const isSingleton = singletonLifelineItems.includes(activeItem.id);
+    
+    if (isSingleton) {
+        if (currentQuantity >= 1 || totalSelectedCount >= MAX_SELECTED_ITEMS) {
+            return; 
+        }
+        const currentTotalWithoutThis = selectedItems
+            .filter(item => item.id !== activeItem.id)
+            .reduce((sum, item) => sum + item.quantity, 0);
+        
+        if (currentTotalWithoutThis + 1 <= MAX_SELECTED_ITEMS) {
+            setCurrentQuantity(1);
+        }
+
+    } else {
+        if (totalSelectedCount < MAX_SELECTED_ITEMS) {
+            setCurrentQuantity(prev => prev + 1);
+        }
+    }
   };
 
   const handleDecrease = () => {
@@ -122,6 +155,13 @@ export default function Home() {
       setIsSaving(false);
     }
   };
+  
+  // (変更なし)
+  useEffect(() => {
+    if (activeItem.id === 9 && filteredItems.length > 0) {
+      setActiveItem(filteredItems[0]);
+    }
+  }, [activeItem, filteredItems]);
 
   return (
     <div className="bg-[#F3EADF] min-h-screen font-sans text-[#5C4033]">
@@ -152,7 +192,7 @@ export default function Home() {
                   return (
                     <div key={item.id} onClick={() => handleItemClick(item)} className="relative cursor-pointer group transition-transform transform hover:scale-105">
                       <div className={`aspect-square bg-white rounded-lg flex items-center justify-center p-2 border-2 ${activeItem.id === item.id ? 'border-orange-400' : 'border-transparent'} ${selected ? 'shadow-lg' : ''}`}>
-                        <img src={item.image} alt={item.name} className="max-w-full max-h-full object-contain" />
+                        <img src={item.image} alt={item.name} className="h-5/6 w-5/6 object-contain" />
                       </div>
                       {selected && (
                         <div className="absolute -top-2 -right-2 bg-orange-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold border-2 border-white">{selected.quantity}</div>
@@ -165,15 +205,14 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ▼▼▼ 【ここから修正】 右側の詳細パネルのレイアウトを調整 ▼▼▼ */}
-          <div className="bg-[#F9F6F0] p-6 rounded-2xl shadow-md border-2 border-[#E9DDCF] flex flex-col items-center">
+          <div className="bg-[#F9F6F0] p-6 rounded-2xl shadow-md border-2 border-[#E9DDCF] flex flex-col items-center min-h-0 overflow-y-auto">
             <div className="w-full flex flex-col flex-grow">
-              <div className="bg-white rounded-lg w-full aspect-square mb-4 flex items-center justify-center p-4 flex-shrink-0">
-                <img src={activeItem.image} alt={activeItem.name} className="max-w-full max-h-full object-contain" />
+              <div className="bg-white rounded-lg w-full h-48 mb-4 flex items-center justify-center p-4 flex-shrink-0">
+                <img src={activeItem.image} alt={activeItem.name} className="h-5/6 w-5/6 object-contain" />
               </div>
               <h3 className="text-2xl font-bold text-center mb-2 flex-shrink-0">{activeItem.name}</h3>
 
-              {/* 説明エリア：高さを可変にし、最低限の高さを確保 */}
+              {/* (変更なし) 説明エリア */}
               <div className="text-center min-h-[7rem] px-2 mb-4">
                 <p className="text-sm text-gray-600 mb-3">{activeItem.description}</p>
                 <div className='space-y-2'>
@@ -201,14 +240,21 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* 操作ボタンエリア：mt-autoで下寄せにする */}
+              {/* (変更なし) 操作ボタンエリア */}
               <div className="mt-auto">
                 <div className="flex items-center justify-center gap-4 my-2">
                   <button onClick={handleDecrease} className="p-3 bg-white rounded-full shadow-sm hover:bg-gray-100 transition-colors disabled:opacity-50" disabled={currentQuantity <= 0}>
                     <Minus size={20} />
                   </button>
                   <span className="text-4xl font-bold w-16 text-center">{currentQuantity}</span>
-                  <button onClick={handleIncrease} className="p-3 bg-white rounded-full shadow-sm hover:bg-gray-100 transition-colors disabled:opacity-50" disabled={totalSelectedCount >= MAX_SELECTED_ITEMS}>
+                  <button 
+                    onClick={handleIncrease} 
+                    className="p-3 bg-white rounded-full shadow-sm hover:bg-gray-100 transition-colors disabled:opacity-50" 
+                    disabled={
+                        (singletonLifelineItems.includes(activeItem.id) && currentQuantity >= 1) || // Singletonは1が上限
+                        totalSelectedCount >= MAX_SELECTED_ITEMS // 全体の上限
+                    }
+                  >
                     <Plus size={20} />
                   </button>
                 </div>
@@ -222,9 +268,9 @@ export default function Home() {
               </div>
             </div>
           </div>
-          {/* ▲▲▲ 【ここまで修正】 ▲▲▲ */}
         </main>
         
+        {/* (変更なし) フッター */}
         <div className="mt-8 flex justify-center flex-shrink-0">
           <button 
             onClick={handleConfirm}
