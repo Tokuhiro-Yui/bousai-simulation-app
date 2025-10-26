@@ -663,7 +663,7 @@ export default function SimulationPage() {
             sessionStorage.setItem('simulationResult', JSON.stringify(resultData));
 
             if (reason !== 'no_toilet') {
-                 let endMessage = "いずれかのステータスが0になり、避難生活を続けることができなくなった...";
+                 const endMessage = "いずれかのステータスが0になり、避難生活を続けることができなくなった...";
                  setMessage(endMessage);
             }
 
