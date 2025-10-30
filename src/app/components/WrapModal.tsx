@@ -38,7 +38,7 @@ const WrapModal: React.FC<WrapModalProps> = ({ isOpen, onClose }) => {
           {/* 画像（仮のパス） */}
           <div className="bg-gray-100 rounded-lg h-56 flex items-center justify-center mb-6 flex-shrink-0 w-full p-2">
             <img 
-              src="/images/wrap_guide.png" // 画像パスは適宜変更してください
+              src="/images/ラップ1.jpg" // 画像パスは適宜変更してください
               alt="ラップの活用法"
               className="max-h-full max-w-full object-contain"
             />

@@ -18,42 +18,42 @@ const steps: Step[] = [
   {
     title: 'ステップ1',
     description: 'ポリ袋を便器に被せる',
-    image: '/images/toilet_guide/step1.png' // 仮の画像パス
+    image: '/images/トイレ1.png' // 仮の画像パス
   },
   {
     title: 'ステップ2',
     description: 'ポリ袋が動かないように便座を下げて、その上から排泄用の袋を被せる',
-    image: '/images/toilet_guide/step2.png' // 仮の画像パス
+    image: '/images/トイレ2.png' // 仮の画像パス
   },
   {
     title: 'ステップ3',
     description: '用をたす',
-    image: '/images/toilet_guide/step3.png' // 仮の画像パス
+    image: '/images/トイレ3.png' // 仮の画像パス
   },
   {
     title: 'ステップ4',
     description: '凝固剤を入れる',
-    image: '/images/toilet_guide/step4.png' // 仮の画像パス
+    image: '/images/トイレ4.png' // 仮の画像パス
   },
   {
     title: 'ステップ5',
     description: '排泄用の袋を取り出し、空気を抜いて縛る',
-    image: '/images/toilet_guide/step5.png' // 仮の画像パス
+    image: '/images/トイレ5.png' // 仮の画像パス
   },
   {
     title: 'ステップ6',
     description: '臭いや衛生上の問題が発生しないよう、ふた付きの容器を用意し、保管する場所は生活空間からなるべく離れた、直射日光が当たらない場所を選ぶ',
-    image: '/images/toilet_guide/step6.png' // 仮の画像パス
+    image: '/images/トイレ6.jpg' // 仮の画像パス
   },
   {
     title: 'ポイント1：布テープ',
     description: '誤ってトイレを流してしまわないように、流すレバーやボタンにテープを貼り、止めておく',
-    image: '/images/toilet_guide/point1.png' // 仮の画像パス
+    image: '/images/使用禁止.HEIC' // 仮の画像パス
   },
   {
-    title: 'ポイント2：使い捨て手袋、消毒液',
-    description: '衛生的に作業中は使い捨て手袋を使い、消毒液を使用したほうがいい',
-    image: '/images/toilet_guide/point2.png' // 仮の画像パス
+    title: 'ポイント2：使い捨て手袋',
+    description: '衛生的に作業中は使い捨て手袋を使用する',
+    image: '/images/ビニール手袋.png' // 仮の画像パス
   }
 ];
 

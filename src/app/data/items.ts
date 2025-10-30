@@ -62,7 +62,7 @@ export const allItems: Item[] = [
     { id: 28, name: 'ビニール手袋', description: '1箱。衛生的な調理やトイレの処理、看病の際に手を守ります。', image: '/images/ビニール手袋.png', category: 'lifeline', effects: {} },
     // ▲▲▲ 修正ここまで ▲▲▲
     { id: 29, name: '乾電池', description: 'ラジオやランタン、懐中電灯などの電源として必要です。', image: '/images/乾電池.png', category: 'lifeline', effects: {} },
-    { id: 30, name: '布製ガムテープ', description: '物の補修、固定、メモ書き、応急手当など、万能なテープ。', image: '/images/ガムテープ.png', category: 'lifeline', effects: {} },
+    { id: 30, name: '布製ガムテープ', description: '物の補修、固定、メモ書き、応急手当など、万能なテープ。', image: '/images/布製ガムテープ.png', category: 'lifeline', effects: {} },
     { id: 31, name: '給水袋', description: '給水所で水を受け取る際に必要。折りたためて便利です。', image: '/images/給水袋.png', category: 'lifeline', effects: {} },
     { id: 32, name: 'リュックサック', description: '両手を空けて荷物を運ぶことができます。避難時や水の運搬に。', image: '/images/リュック.png', category: 'lifeline', effects: {} },
     // ▼▼▼ 【修正】 ID 33 (カイロ) の description, maxUses, effects を変更 ▼▼▼
