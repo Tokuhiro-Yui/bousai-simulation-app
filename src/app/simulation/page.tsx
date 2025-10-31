@@ -1,7 +1,7 @@
 'use client';
 
-// ▼▼▼ "useMemo" を 'react' からインポートするよう修正 ▼▼▼
-import { useState, useEffect, useMemo } from 'react';
+// ▼▼▼ "useMemo" と "useRef" を 'react' からインポートするよう修正 ▼▼▼
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, getDocs, query, orderBy, limit } from "firebase/firestore";
@@ -105,6 +105,11 @@ export default function SimulationPage() {
     const [originalSelection, setOriginalSelection] = useState<{id: number, quantity: number}[]>([]);
     const [isResolvingTurn, setIsResolvingTurn] = useState(false);
 
+    // ▼▼▼ 【追加】 キャラクター表情管理用の State と Ref ▼▼▼
+    const [characterExpression, setCharacterExpression] = useState<'normal' | 'relieved'>('normal');
+    const expressionTimerRef = useRef<NodeJS.Timeout | null>(null);
+    // ▲▲▲ 【追加】 ここまで ▲▲▲
+
     // (変更なし)
     const [turnStep, setTurnStep] = useState<'idle' | 'decay' | 'intro_message_0' | 'intro_message_1' | 'intro_message_2' | 'intro_message_3' | 'intro_message_4' | 'toilet' | 'wash_hands_check' | 'wash_hands_result' | 'dial_intro_1' | 'dial_intro_2' | 'dial_modal_open' | 'dial_result' | 'night_event_start' | 'night_event_result' | 'safety_check_intro_1' | 'safety_check_intro_2' | 'safety_check_modal_open' | 'safety_check_result' | 'shop_visit_1' | 'shop_visit_2' | 'shop_visit_3' | 'lantern_check' | 'battery_check_result' | 'water_station_intro_1' | 'water_station_intro_2' | 'water_station_modal_open' | 'water_station_result' | 'rolling_stock_intro_1' | 'rolling_stock_intro_2' | 'rolling_stock_modal_open' | 'rolling_stock_result' | 'cairo_check_1' | 'cairo_check_2' | 'cairo_result' | 'final_message'>('idle');
     
@@ -137,6 +142,23 @@ export default function SimulationPage() {
     const [hygieneLowCounter, setHygieneLowCounter] = useState(0); 
     const [nutritionNeglectCounter, setNutritionNeglectCounter] = useState(0); 
     const [usedNutritionItemThisTurn, setUsedNutritionItemThisTurn] = useState(false); 
+
+    // ▼▼▼ 【追加】 表情を一時的にフラッシュさせる関数 ▼▼▼
+    const flashExpression = (expression: 'relieved', duration: number = 2000) => {
+        // 既にタイマーが動いていたらクリア
+        if (expressionTimerRef.current) {
+            clearTimeout(expressionTimerRef.current);
+        }
+        
+        setCharacterExpression(expression); // 表情をセット
+
+        // durationミリ秒後に 'normal' に戻すタイマーをセット
+        expressionTimerRef.current = setTimeout(() => {
+            setCharacterExpression('normal');
+            expressionTimerRef.current = null;
+        }, duration);
+    };
+    // ▲▲▲ 【追加】 ここまで ▲▲▲
 
     // (変更なし)
     const getItemDetails = (id: number): Item | undefined => allItems.find(item => item.id === id);
@@ -341,7 +363,7 @@ export default function SimulationPage() {
         else if (turnStep === 'intro_message_2') { setMessage("『緊急連絡：全住民の皆様へ。配管破損の恐れあり！復旧のアナウンスがあるまで、絶対にトイレの水を流さないでください。下の階で汚水が逆流する可能性があります！』"); }
         else if (turnStep === 'intro_message_3') { setMessage("非常用トイレを使うしかないな・・・"); }
 
-        // ▼▼▼ 【修正】 トイレ自動消費 (ID 28: ビニール手袋を quantity で消費) ▼▼▼
+        // ▼▼▼ 【修正】 トイレ自動消費 (ID 28: ビニール手袋の *消費を削除*) ▼▼▼
         else if(turnStep === 'toilet') {
             const toiletDetails = getItemDetails(6);
             const glovesDetails = getItemDetails(28);
@@ -357,7 +379,7 @@ export default function SimulationPage() {
                     const totalRecovery = hygienePerUse * consumeCount;
                     const effects: Effect = { hygiene: totalRecovery };
                     consumeItem(6, 'uses', consumeCount);
-                    consumeItem(28, 'quantity', consumeCount); // ★ quantity で消費
+                    // consumeItem(28, 'quantity', consumeCount); // ★★★【削除】★★★
                     applyEffects(effects);
                     setMessage(`使い捨て手袋と非常用トイレを${consumeCount}回使った。\n衛生的に処理できた。${formatEffects(effects)}`);
                 } else {
@@ -398,7 +420,7 @@ export default function SimulationPage() {
             }
         }
 
-        // ▼▼▼ 【修正】 ターン固有イベント (dial) (ID 8: バッテリーを quantity で消費) ▼▼▼
+        // ▼▼▼ 【修正】 ターン固有イベント (dial) (ID 8: バッテリーの *消費を削除*) ▼▼▼
         else if (turnStep === 'dial_intro_1') { setMessage("スマートフォンの充電が残り少ない。"); }
         else if (turnStep === 'dial_intro_2') { setMessage("「家族は今、どこにいるんだろう……。無事に避難できたかな。」"); }
         else if (turnStep === 'dial_result') {
@@ -406,8 +428,9 @@ export default function SimulationPage() {
             if (batteryItem && (batteryItem.quantity || 0) > 0) { // ★ quantity でチェック
                 const effects: Effect = { morale: 8 };
                 applyEffects(effects);
-                consumeItem(8, 'quantity', 1); // ★ quantity で消費
-                setMessage(`モバイルバッテリーを1つ使い、家族の伝言を聞けた。無事で、小学校に避難しているようだ。安心した。${formatEffects(effects)}`);
+                // consumeItem(8, 'quantity', 1); // ★★★【削除】★★★
+                setMessage(`モバイルバッテリーのおかげで、家族の伝言を聞けた。無事で、小学校に避難しているようだ。安心した。${formatEffects(effects)}`);
+                flashExpression('relieved'); // ★【追加】
             } else {
                 const effects: Effect = { morale: -5 };
                 applyEffects(effects);
@@ -428,6 +451,7 @@ export default function SimulationPage() {
                 const effects: Effect = { morale: 4 };
                 applyEffects(effects);
                 setMessage(`明かりがあるだけで、こんなに安心するんだ……。${formatEffects(effects)}`);
+                flashExpression('relieved'); // ★【追加】
             } else {
                 const effects: Effect = { morale: -4 };
                 applyEffects(effects);
@@ -443,6 +467,7 @@ export default function SimulationPage() {
                 const effects: Effect = { morale: 3 };
                 applyEffects(effects);
                 setMessage(`布製ガムテープで玄関に安否を張り出した。\nこれで、自分が無事だと周囲に知らせることができる。少し安心した。${formatEffects(effects)}`);
+                flashExpression('relieved'); // ★【追加】
             } else {
                 setMessage("伝言に使えるものがない…");
             }
@@ -463,20 +488,23 @@ export default function SimulationPage() {
                  setTurnStep('battery_check_result');
              }
         }
-        // (変更なし)
+        // ▼▼▼ 【修正】 ターン固有イベント (battery_check_result) (ID 29: 乾電池の *消費を削除*) ▼▼▼
         else if (turnStep === 'battery_check_result') {
              const hasLantern = inventory.some(i => i.id === 24);
              if (hasLantern) {
                  const batteryItem = inventory.find(i => i.id === 29);
                  if (batteryItem && batteryItem.quantity > 0) {
-                     consumeItem(29, 'quantity', 1); 
+                     // consumeItem(29, 'quantity', 1); // ★★★【削除】★★★
                      setMessage("電池を備蓄しておいて本当によかった。これでまだ明かりが使える！");
                      setBackgroundImage('/images/background_LED.png'); // ランタン再点灯
+                     flashExpression('relieved'); // ★【追加】
                  } else {
                      setMessage("電池も備えておくべきだった…。こんなタイミングで切れるなんて。");
                  }
              }
         }
+        // ▲▲▲ 修正ここまで ▲▲▲
+
         // (変更なし) ターン固有イベント (water_station)
         else if (turnStep === 'water_station_intro_1') { setMessage("近くの公園に給水車が到着したらしい。\n近所の人たちがポリタンクを持って集まっている。"); }
         else if (turnStep === 'water_station_intro_2') { setMessage("私も水をもらいに行こう。"); }
@@ -487,9 +515,11 @@ export default function SimulationPage() {
             if (hasBackpack && hasWaterBag) {
                 setTotalWater(prev => prev + 3000);
                 setMessage("給水袋をリュックに入れて運んだ。階段の上り下りも少し楽だった。(水+3L)");
+                flashExpression('relieved'); // ★【追加】
             } else if (hasWaterBag) {
                 setTotalWater(prev => prev + 2500);
                 setMessage("手で運ぶのは重かったけれど、なんとか運びきった。(水+2.5L)");
+                flashExpression('relieved'); // ★【追加】
             } else {
                 setMessage("水をもらいに行きたいけど、入れる容器がない……");
             }
@@ -509,14 +539,15 @@ export default function SimulationPage() {
         // (変更なし)
         else if (turnStep === 'cairo_check_2') { setMessage("今日は寒いな…"); }
         
-        // ▼▼▼ 【修正】 ターン固有イベント (cairo_result) (ID 33: カイロを quantity で消費) ▼▼▼
+        // ▼▼▼ 【修正】 ターン固有イベント (cairo_result) (ID 33: カイロの *消費を削除*) ▼▼▼
         else if (turnStep === 'cairo_result') {
             const cairoItem = inventory.find(i => i.id === 33);
             if (cairoItem && (cairoItem.quantity || 0) > 0) { // ★ quantity でチェック
                 const effects: Effect = { morale: 5 };
                 applyEffects(effects);
-                consumeItem(33, 'quantity', 1); // ★ quantity で消費
+                // consumeItem(33, 'quantity', 1); // ★★★【削除】★★★
                 setMessage(`カイロを使った。かじかんだ手が温まる…${formatEffects(effects)}`);
+                flashExpression('relieved'); // ★【追加】
             } else {
                 setMessage("カイロも備蓄しておくべきだった…");
             }
@@ -762,6 +793,12 @@ export default function SimulationPage() {
         const effects = details.heatedEffects || {};
         applyEffects(effects);
         setMessage(`${customMessage}${formatEffects(effects)}`);
+
+        // ▼▼▼ 【追加】 精神(morale)が回復したら安堵表情にする ▼▼▼
+        if (effects.morale && effects.morale > 0) {
+            flashExpression('relieved');
+        }
+        // ▲▲▲ 【追加】 ここまで ▲▲▲
     };
 
 
@@ -789,6 +826,7 @@ export default function SimulationPage() {
                 setNutritionNeglectCounter(0);
                 consumeItem(itemId, 'uses', 1);
                 setMessage(`救急箱を使い、体調が回復した！`);
+                flashExpression('relieved'); // ★【追加】
             } else {
                 setMessage("体調は悪くないので、救急箱は使わなかった。");
             }
@@ -815,8 +853,11 @@ export default function SimulationPage() {
         
         // --- モーダル対象外、または2回目以降の使用 ---
 
+        let itemEffects: Effect = {}; // ★【追加】
+
         if (heated) {
             // (ID 2, ID 13(初回) は上で処理されたので、ここはID 13(2回目以降)や他の加熱アイテムが実行される)
+            // ★ executeHeating 内部で flashExpression が呼ばれる
             executeHeating(itemId);
 
         } else {
@@ -829,8 +870,16 @@ export default function SimulationPage() {
                 consumeItem(itemId, 'quantity', 1);
             }
             setMessage(`${details.name}を使用した。${formatEffects(effects)}`);
+            
+            itemEffects = effects; // ★【追加】
         }
         // ▲▲▲ 【修正ここまで】 ▲▲▲
+
+        // ★【追加】 精神(morale)が回復したら安堵表情にする
+        // (加熱の場合は executeHeating 内部で処理されるため、 'else' の場合のみチェック)
+        if (!heated && itemEffects.morale && itemEffects.morale > 0) {
+            flashExpression('relieved');
+        }
 
 
         if (details.category === 'hygiene' && details.id !== 5) {
@@ -874,6 +923,38 @@ export default function SimulationPage() {
 
     const categoryNames: { [key in Item['category'] | 'other']: string } = { food: '食料・水', hygiene: '衛生用品', lifeline: '生活用品', other: 'その他' };
 
+    // ▼▼▼ 【追加】 優先度に基づき、表示する画像パスを決定する ▼▼▼
+    // ※※※ ご自身の画像パスに合わせてファイル名を変更してください ※※※
+    const characterImagePath = useMemo(() => {
+        // 優先度1: 体調不良
+        if (isSick) {
+            // ★体調不良時の画像パス
+            return "/images/体調不良.png"; 
+        }
+        
+        // 優先度2: 安堵（一時的な表情）
+        if (characterExpression === 'relieved') {
+            // ★安堵した表情の画像パス
+            return "/images/character_relieved.png"; 
+        }
+
+        // 優先度3: 不安（体躯座り）
+        const isDark = turn === '夜' && backgroundImage === '/images/background_night.png';
+        const isAnxious = status.morale < 40 || isDark; // 精神が40未満、または暗闇
+        
+        if (isAnxious) {
+            // ★不安（体躯座り）の画像パス
+            return "/images/character_anxious.png"; 
+        }
+
+        // 優先度4: ノーマル
+        // ★ノーマル（少し不満げ）の画像パス
+        return "/images/my-character.png"; 
+    
+    }, [isSick, characterExpression, status.morale, turn, backgroundImage]);
+    // ▲▲▲ 【追加】 ここまで ▲▲▲
+
+
     // --- レンダリング (JSX) ---
     if (isLoading) { return <div className="bg-[#F3EADF] min-h-screen flex items-center justify-center text-2xl text-[#5C4033]">データを読み込んでいます...</div>; }
 
@@ -910,10 +991,10 @@ export default function SimulationPage() {
                     {/* (変更なし) キャラクター・メッセージ欄 */}
                     <div className="lg:col-span-2 flex flex-col items-center justify-between min-h-0">
                         
-                        {/* ▼▼▼ 【修正】 体調不良で画像変更 ▼▼▼ */}
+                        {/* ▼▼▼ 【修正】 体調不良で画像変更 → useMemo を使うように変更 ▼▼▼ */}
                         <div className="flex-grow flex items-center justify-start relative pt-24">
                             <img 
-                                src={isSick ? "/images/体調不良.png" : "/images/my-character.png"} 
+                                src={characterImagePath} // ★ 決定された画像パスを使用
                                 alt="キャラクター" 
                                 className="drop-shadow-2xl max-h-[55vh] ml-50" 
                             />
@@ -1103,6 +1184,11 @@ export default function SimulationPage() {
                             }
                             // executeHeatingは内部でsetMessageするので、"raw"の場合だけここでセット
                             setMessage(`${details.name}を使用した。${formatEffects(effects)}`);
+
+                            // ★ "raw" の場合も morale があれば flash
+                            if (effects.morale && effects.morale > 0) {
+                                flashExpression('relieved');
+                            }
                         }
                     }
                     

@@ -44,7 +44,7 @@ const RollingStockModal: React.FC<RollingStockModalProps> = ({ isOpen, onClose }
           {/* 図解画像 */}
           <div className="bg-gray-100 rounded-lg h-56 flex items-center justify-center mb-6 flex-shrink-0 w-full p-2">
             <img
-              src="/images/rolling_stock_diagram.png" // 図解の画像パスを指定してください
+              src="/images/ローリングストック.png" // 図解の画像パスを指定してください
               alt="ローリングストック図解"
               className="max-h-full max-w-full object-contain"
             />
