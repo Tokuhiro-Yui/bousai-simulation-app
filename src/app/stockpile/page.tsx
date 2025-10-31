@@ -7,6 +7,21 @@ import { initializeApp, getApps } from "firebase/app";
 import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { type Item, allItems, type Effect, type HeatingCost } from '../data/items'; 
 
+// ▼▼▼ 【追加】 アイテムの量/単位マップ ▼▼▼
+const itemAmountMap: { [key: number]: string } = {
+  1: '3L',        // 水 
+  5:'3回分', ///救急セット
+  10: '30枚',     // ウェットティッシュ
+  20: '9回分',      // 口内洗浄液
+  21: '30枚', // 歯みがき用ウェットティッシュ
+  22: '3回分',      // ウェットボディタオル
+  23: '4回分',      // カセットボンベ (maxUses: 4)
+  24: '3台',      // LEDランタン
+  25: '3食分',      // フリーズドライ
+  33: '6個',//　カイロ
+  6:'5回分',//トイレ 
+  18:'500ml'  //飲み物
+};
 // --- Firebase設定 (変更なし) ---
 const firebaseConfig = {
     apiKey: "AIzaSyCfhxIYHfNNHxwgXyyvMhTgDJ3pydZL6c8",
@@ -32,11 +47,6 @@ const categories: { id: 'all' | Item['category'], name: string }[] = [
 
 const MAX_SELECTED_ITEMS = 200;
 
-// ▼▼▼ 【修正】 数量1に制限する生活用品ID (28, 29, 33 を追加) ▼▼▼
-// (コンロ、バッテリー、ランタン、ラップ、ポリ袋、ガムテープ、給水袋、リュック)
-// (手袋、乾電池、カイロ)
-const singletonLifelineItems = [7, 8, 24, 26, 27, 28, 29, 30, 31, 32, 33];
-// ▲▲▲ 修正ここまで ▲▲▲
 
 // --- UIコンポーネント (変更なし) ---
 const EffectBadge = ({ effect, value }: { effect: 'satiety' | 'hydration' | 'hygiene' | 'morale', value: number }) => {
@@ -66,16 +76,18 @@ const RenderEffects = ({ effects }: { effects?: Effect }) => {
     );
 };
 
+// ▼▼▼ 【修正】 RenderHeatingCost の燃料表記を変更 ▼▼▼
 const RenderHeatingCost = ({ cost }: { cost?: HeatingCost }) => {
     if (!cost) return null;
     return (
         <div className="text-xs text-gray-500 font-semibold mt-1">
             消費:
-            {cost.gas ? <span className="ml-1">燃料x{cost.gas}</span> : null}
+            {cost.gas ? <span className="ml-1">燃料{cost.gas}回分</span> : null}
             {cost.water ? <span className="ml-1">水{cost.water}ml</span> : null}
         </div>
     );
 };
+// ▲▲▲ 修正ここまで ▲▲▲
 
 export default function Home() {
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
@@ -104,25 +116,9 @@ export default function Home() {
 
   // (変更なし) handleIncrease ロジック
   const handleIncrease = () => {
-    const isSingleton = singletonLifelineItems.includes(activeItem.id);
-    
-    if (isSingleton) {
-        if (currentQuantity >= 1 || totalSelectedCount >= MAX_SELECTED_ITEMS) {
-            return; 
-        }
-        const currentTotalWithoutThis = selectedItems
-            .filter(item => item.id !== activeItem.id)
-            .reduce((sum, item) => sum + item.quantity, 0);
-        
-        if (currentTotalWithoutThis + 1 <= MAX_SELECTED_ITEMS) {
-            setCurrentQuantity(1);
-        }
-
-    } else {
-        if (totalSelectedCount < MAX_SELECTED_ITEMS) {
-            setCurrentQuantity(prev => prev + 1);
-        }
-    }
+    if (totalSelectedCount < MAX_SELECTED_ITEMS) {
+        setCurrentQuantity(prev => prev + 1);
+      }
   };
 
   const handleDecrease = () => {
@@ -197,7 +193,10 @@ export default function Home() {
                       {selected && (
                         <div className="absolute -top-2 -right-2 bg-orange-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold border-2 border-white">{selected.quantity}</div>
                       )}
-                      <p className="text-center text-sm mt-1 font-medium truncate">{item.name}</p>
+                      <p className="text-center text-sm mt-1 font-medium truncate">
+                    {item.name}
+                    {itemAmountMap[item.id] ? `(${itemAmountMap[item.id]})` : ''}
+                  </p>
                     </div>
                   );
                 })}
@@ -210,35 +209,79 @@ export default function Home() {
               <div className="bg-white rounded-lg w-full h-48 mb-4 flex items-center justify-center p-4 flex-shrink-0">
                 <img src={activeItem.image} alt={activeItem.name} className="h-5/6 w-5/6 object-contain" />
               </div>
-              <h3 className="text-2xl font-bold text-center mb-2 flex-shrink-0">{activeItem.name}</h3>
-
-              {/* (変更なし) 説明エリア */}
+            
+          <h3 className="text-2xl font-bold text-center mb-2 flex-shrink-0">
+            {activeItem.name}
+            {itemAmountMap[activeItem.id] ? `(${itemAmountMap[activeItem.id]})` : ''}
+          </h3>
+              
+              {/* ▼▼▼ 【修正】 説明エリア（ID: 5 の専用表示を追加） ▼▼▼ */}
               <div className="text-center min-h-[7rem] px-2 mb-4">
                 <p className="text-sm text-gray-600 mb-3">{activeItem.description}</p>
                 <div className='space-y-2'>
+                  
                   {activeItem.id === 1 && (
                     <div>
                       <p className="text-xs font-semibold text-gray-500 mb-1">500mlあたり</p>
                       <RenderEffects effects={{ hydration: 20 }} />
                     </div>
                   )}
-                  {activeItem.id !== 1 && activeItem.effects && Object.keys(activeItem.effects).length > 0 && (
+
+                  {/* --- 救急セット(ID: 5) の専用表示 --- */}
+                  {activeItem.id === 5 && (
+                    <div className="bg-green-100 p-2 rounded-md">
+                      <span className="px-1.5 py-0.5 rounded-full text-xs font-semibold bg-green-200 text-green-900">
+                        体調不良状態を回復
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* --- ID: 1, 5 以外で effects がある場合 --- */}
+                  {activeItem.id !== 1 && activeItem.id !== 5 && activeItem.effects && Object.keys(activeItem.effects).length > 0 && (
                     <div className={activeItem.heatable ? "bg-gray-100 p-2 rounded-md" : ""}>
                       {activeItem.heatable && <p className="text-xs font-semibold text-gray-500 mb-1">そのまま</p>}
                       <RenderEffects effects={activeItem.effects} />
                     </div>
                   )}
-                  {activeItem.id !== 1 && activeItem.heatable && activeItem.heatedEffects && (
+
+                  {/* --- ID: 1, 5 以外で heatable な場合 --- */}
+                  {activeItem.id !== 1 && activeItem.id !== 5 && activeItem.heatable && activeItem.heatedEffects && (
                     <div className={Object.keys(activeItem.effects).length > 0 ? "bg-red-50 p-2 rounded-md" : "p-2 rounded-md"}>
                       {Object.keys(activeItem.effects).length > 0 && 
                         <p className="text-xs font-semibold text-red-600 mb-1">加熱時</p>
                       }
                       <RenderEffects effects={activeItem.heatedEffects} />
-                      <RenderHeatingCost cost={activeItem.heatingCost} />
+
+                      {/* --- ID: 2 (レトルトご飯) の専用表示 --- */}
+                      {activeItem.id === 2 && (
+                        <div className="text-xs text-gray-500 font-semibold mt-1 text-left">
+                          <p className="font-bold">（ポリ袋あり）</p>
+                          <p className="pl-2">消費：燃料1回分、水800ml</p>
+                          <p className="font-bold mt-1">（ポリ袋なし）</p>
+                          <p className="pl-2">消費：燃料1回分、水1200ml</p>
+                          <p className="text-blue-600 font-bold mt-2">※湯煎のお湯は1日再利用できます</p>
+                        </div>
+                      )}
+
+                      {/* --- ID: 3, 13 (その他湯煎アイテム) の表示 --- */}
+                      {(activeItem.id === 3 || activeItem.id === 13) && (
+                        <>
+                          <RenderHeatingCost cost={activeItem.heatingCost} />
+                          <p className="text-xs text-blue-600 font-bold mt-1">※湯煎のお湯は1日再利用できます</p>
+                        </>
+                      )}
+                      
+                      {/* --- それ以外の加熱アイテム (湯煎対象外) --- */}
+                      {![2, 3, 13].includes(activeItem.id) && (
+                        <RenderHeatingCost cost={activeItem.heatingCost} />
+                      )}
                     </div>
                   )}
+
                 </div>
               </div>
+              {/* ▲▲▲ 修正ここまで ▲▲▲ */}
+
 
               {/* (変更なし) 操作ボタンエリア */}
               <div className="mt-auto">
@@ -251,7 +294,6 @@ export default function Home() {
                     onClick={handleIncrease} 
                     className="p-3 bg-white rounded-full shadow-sm hover:bg-gray-100 transition-colors disabled:opacity-50" 
                     disabled={
-                        (singletonLifelineItems.includes(activeItem.id) && currentQuantity >= 1) || // Singletonは1が上限
                         totalSelectedCount >= MAX_SELECTED_ITEMS // 全体の上限
                     }
                   >

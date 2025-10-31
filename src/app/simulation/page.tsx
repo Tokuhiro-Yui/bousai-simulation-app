@@ -116,10 +116,8 @@ export default function SimulationPage() {
     const [mealHistory, setMealHistory] = useState<(string | undefined)[]>([]);
     const [usedHygieneItems, setUsedHygieneItems] = useState<number[]>([]);
     
-    // ▼▼▼ 【修正】 湯煎システムの状態管理を変更 ▼▼▼
-    // const [hasUsedBoilingWaterToday, setHasUsedBoilingWaterToday] = useState(false);
+    // (変更なし) 湯煎システム
     const [boilingWaterAmount, setBoilingWaterAmount] = useState(0); // その日に沸かしたお湯の量(ml)
-    // ▲▲▲ 修正ここまで ▲▲▲
 
     const arbitraryHygieneItems = [10, 20, 21, 22];
 
@@ -132,6 +130,8 @@ export default function SimulationPage() {
     const [hasUsedRetortGohan, setHasUsedRetortGohan] = useState(false);
     const [isWrapModalOpen, setIsWrapModalOpen] = useState(false);
     const [hasUsedRetortFood, setHasUsedRetortFood] = useState(false);
+    // ▼▼▼ 【追加】 レトルト食品のアクション保存用State ▼▼▼
+    const [retortFoodAction, setRetortFoodAction] = useState<'heated' | 'raw' | null>(null);
 
     // (変更なし) 体調不良 State
     const [hygieneLowCounter, setHygieneLowCounter] = useState(0); 
@@ -232,7 +232,7 @@ export default function SimulationPage() {
         initializeSimulation();
     }, []);
 
-    // ▼▼▼ 【修正】 ターン進行ロジック (湯煎リセット + 背景変更タイミング修正) ▼▼▼
+    // (変更なし) ターン進行ロジック
     useEffect(() => {
         if (!isResolvingTurn || turnCount === 0 || isGameOver) return;
 
@@ -245,13 +245,9 @@ export default function SimulationPage() {
             setTurn(newTurn);
 
             if (newTurn === '朝') {
-                // ▼▼▼ 【修正】 湯煎状態をリセット ▼▼▼
-                // setHasUsedBoilingWaterToday(false);
                 setBoilingWaterAmount(0); 
-                // ▲▲▲ 修正ここまで ▲▲▲
                 setBackgroundImage('/images/background.png');
             }
-            // ▼▼▼ 【修正】 夜ターンの背景設定ロジック (decayステップに移動) ▼▼▼
             else if (newTurn === '夜') {
                 const hasLantern = inventory.some(i => i.id === 24);
                 
@@ -264,7 +260,6 @@ export default function SimulationPage() {
                     }
                 } else if (turnCount === 6) {
                     // 2日目の夜: 1日目と同じ状態を引き継ぐ
-                    // (この後の 'lantern_check' イベントで消灯→電池交換が発生)
                     if (hasLantern) {
                         setBackgroundImage('/images/background_LED.png');
                     } else {
@@ -282,7 +277,6 @@ export default function SimulationPage() {
                     }
                 }
             }
-            // ▲▲▲ 【修正ここまで】 ▲▲▲
 
             // (変更なし) 体調不良チェック
             let sickReasonHygiene = false;
@@ -347,7 +341,7 @@ export default function SimulationPage() {
         else if (turnStep === 'intro_message_2') { setMessage("『緊急連絡：全住民の皆様へ。配管破損の恐れあり！復旧のアナウンスがあるまで、絶対にトイレの水を流さないでください。下の階で汚水が逆流する可能性があります！』"); }
         else if (turnStep === 'intro_message_3') { setMessage("非常用トイレを使うしかないな・・・"); }
 
-        // (変更なし) トイレ自動消費
+        // ▼▼▼ 【修正】 トイレ自動消費 (ID 28: ビニール手袋を quantity で消費) ▼▼▼
         else if(turnStep === 'toilet') {
             const toiletDetails = getItemDetails(6);
             const glovesDetails = getItemDetails(28);
@@ -358,12 +352,12 @@ export default function SimulationPage() {
             const glovesItem = inventory.find(i => i.id === 28);
 
             if (toiletDetails && toiletItem && (toiletItem.uses || 0) >= consumeCount) {
-                if (glovesDetails && glovesItem && (glovesItem.uses || 0) >= consumeCount) {
+                if (glovesDetails && glovesItem && (glovesItem.quantity || 0) >= consumeCount) { // ★ quantity でチェック
                     const hygienePerUse = 6;
                     const totalRecovery = hygienePerUse * consumeCount;
                     const effects: Effect = { hygiene: totalRecovery };
                     consumeItem(6, 'uses', consumeCount);
-                    consumeItem(28, 'uses', consumeCount);
+                    consumeItem(28, 'quantity', consumeCount); // ★ quantity で消費
                     applyEffects(effects);
                     setMessage(`使い捨て手袋と非常用トイレを${consumeCount}回使った。\n衛生的に処理できた。${formatEffects(effects)}`);
                 } else {
@@ -379,6 +373,7 @@ export default function SimulationPage() {
                 setGameOverReason('no_toilet');
             }
         }
+        // ▲▲▲ 修正ここまで ▲▲▲
 
         // (変更なし) 手洗いチェック
         else if(turnStep === 'wash_hands_check') { setMessage("トイレの後は、手をきれいにしないと……"); }
@@ -403,27 +398,28 @@ export default function SimulationPage() {
             }
         }
 
-        // (変更なし) ターン固有イベント (dial)
+        // ▼▼▼ 【修正】 ターン固有イベント (dial) (ID 8: バッテリーを quantity で消費) ▼▼▼
         else if (turnStep === 'dial_intro_1') { setMessage("スマートフォンの充電が残り少ない。"); }
         else if (turnStep === 'dial_intro_2') { setMessage("「家族は今、どこにいるんだろう……。無事に避難できたかな。」"); }
         else if (turnStep === 'dial_result') {
             const batteryItem = inventory.find(i => i.id === 8);
-            if (batteryItem && (batteryItem.uses === undefined || batteryItem.uses > 0)) {
+            if (batteryItem && (batteryItem.quantity || 0) > 0) { // ★ quantity でチェック
                 const effects: Effect = { morale: 8 };
                 applyEffects(effects);
-                setMessage(`家族の伝言を聞けた。無事で、小学校に避難しているようだ。安心した。${formatEffects(effects)}`);
+                consumeItem(8, 'quantity', 1); // ★ quantity で消費
+                setMessage(`モバイルバッテリーを1つ使い、家族の伝言を聞けた。無事で、小学校に避難しているようだ。安心した。${formatEffects(effects)}`);
             } else {
                 const effects: Effect = { morale: -5 };
                 applyEffects(effects);
                 setMessage(`「ああ、こんな時に限ってスマホの充電が……。モバイルバッテリーを用意しておけばよかった。」${formatEffects(effects)}`);
             }
         }
+        // ▲▲▲ 修正ここまで ▲▲▲
         
-        // ▼▼▼ 【修正】 1日目の夜 (Turn 3) 背景変更ロジックを削除 ▼▼▼
+        // (変更なし)
         else if (turnStep === 'night_event_start') {
             setMessage("夜になり、部屋が暗くなった。");
         }
-        // ▲▲▲ 修正ここまで ▲▲▲
         
         // (変更なし)
         else if (turnStep === 'night_event_result') {
@@ -464,7 +460,6 @@ export default function SimulationPage() {
                  setBackgroundImage('/images/background_night.png'); // ランタン消灯
              } else {
                  setMessage("暗くて料理も片付けも大変だ…。やっぱり明かりは大事だな。");
-                 // setBackgroundImage('/images/background_night.png'); // decayステップで設定済み
                  setTurnStep('battery_check_result');
              }
         }
@@ -479,7 +474,6 @@ export default function SimulationPage() {
                      setBackgroundImage('/images/background_LED.png'); // ランタン再点灯
                  } else {
                      setMessage("電池も備えておくべきだった…。こんなタイミングで切れるなんて。");
-                     // 背景は background_night.png のまま
                  }
              }
         }
@@ -507,25 +501,27 @@ export default function SimulationPage() {
              setMessage("普段から食べるものを備えた方がいいのかも…");
         }
         
-        // ▼▼▼ 【修正】 3日目の夜 (Turn 9) 背景変更ロジックを削除 ▼▼▼
+        // (変更なし)
         else if (turnStep === 'cairo_check_1') {
             setMessage("こんな生活はいつまで続くんだろう……"); 
         }
-        // ▲▲▲ 修正ここまで ▲▲▲
         
         // (変更なし)
         else if (turnStep === 'cairo_check_2') { setMessage("今日は寒いな…"); }
+        
+        // ▼▼▼ 【修正】 ターン固有イベント (cairo_result) (ID 33: カイロを quantity で消費) ▼▼▼
         else if (turnStep === 'cairo_result') {
             const cairoItem = inventory.find(i => i.id === 33);
-            if (cairoItem && (cairoItem.uses || 0) > 0) {
+            if (cairoItem && (cairoItem.quantity || 0) > 0) { // ★ quantity でチェック
                 const effects: Effect = { morale: 5 };
                 applyEffects(effects);
-                consumeItem(33, 'uses', 1);
+                consumeItem(33, 'quantity', 1); // ★ quantity で消費
                 setMessage(`カイロを使った。かじかんだ手が温まる…${formatEffects(effects)}`);
             } else {
                 setMessage("カイロも備蓄しておくべきだった…");
             }
         }
+        // ▲▲▲ 修正ここまで ▲▲▲
 
         else if (turnStep === 'final_message') {
             setMessage("（...何かメッセージがあればここに）");
@@ -672,7 +668,7 @@ export default function SimulationPage() {
     }, [status, gameOverReason, isLoading]);
 
 
-    // ▼▼▼ 【修正】 加熱処理 (executeHeating) のロジック ▼▼▼
+    // --- 加熱処理 (executeHeating) (変更なし) ---
     const executeHeating = (itemId: number) => {
         const details = getItemDetails(itemId);
         if (!details || !details.heatable) return;
@@ -733,7 +729,6 @@ export default function SimulationPage() {
                     }
                 } else {
                     // --- B: 800ml → 1200ml に増やす湯煎 ---
-                    // (この分岐は itemId === 2 && !hasPolyBag の時しか発生しないはず)
                     setBoilingWaterAmount(requiredBoilingWater); // ポットの量を1200に更新
                     customMessage = `今日は既にお湯(800ml)を沸かしているが、ポリ袋がないため追加で水${additionalWaterNeeded}mlを使って加熱した。`;
                 }
@@ -753,7 +748,6 @@ export default function SimulationPage() {
             waterConsumedThisTurn = waterCost;
             customMessage = `${details.name}を加熱して食べた。`;
         }
-        // --- 湯煎ロジック修正ここまで ---
 
         consumeItem(23, 'uses', fuelCost); // 燃料消費
         
@@ -769,10 +763,9 @@ export default function SimulationPage() {
         applyEffects(effects);
         setMessage(`${customMessage}${formatEffects(effects)}`);
     };
-    // ▲▲▲ 【修正】 加熱処理 (executeHeating) のロジックここまで ▲▲▲
 
 
-    // --- handleUseItem (変更なし) ---
+    // ▼▼▼ 【修正】 handleUseItem (ID 13のチェックを加熱分岐の *外* に移動) ▼▼▼
     const handleUseItem = (itemId: number, heated = false) => {
         if (isResolvingTurn || isGameOver) return;
         const details = getItemDetails(itemId);
@@ -802,23 +795,32 @@ export default function SimulationPage() {
             return;
         }
 
+        // ▼▼▼ 【ロジック修正】 ▼▼▼
+        // 先にモーダル対象のアイテム（ID 2, 13）をチェック
+
+        // 1. レトルトご飯 (ID: 2) の加熱時
+        if (heated && itemId === 2 && !hasUsedRetortGohan) {
+            setIsRetortGohanModalOpen(true); 
+            setHasUsedRetortGohan(true);      
+            return; // モーダル表示のため中断
+        }
+
+        // 2. レトルト食品 (ID: 13) の初回使用時 (加熱・そのまま両方)
+        if (itemId === 13 && !hasUsedRetortFood) {
+            setIsWrapModalOpen(true); 
+            setHasUsedRetortFood(true);  
+            setRetortFoodAction(heated ? 'heated' : 'raw'); // 実行するアクションを保存
+            return; // モーダル表示のため中断
+        }
+        
+        // --- モーダル対象外、または2回目以降の使用 ---
+
         if (heated) {
-            
-            if (itemId === 2 && !hasUsedRetortGohan) {
-                setIsRetortGohanModalOpen(true); 
-                setHasUsedRetortGohan(true);      
-                return; 
-            }
-
-            if (itemId === 13 && !hasUsedRetortFood) {
-                setIsWrapModalOpen(true); 
-                setHasUsedRetortFood(true);  
-                return; 
-            }
-
+            // (ID 2, ID 13(初回) は上で処理されたので、ここはID 13(2回目以降)や他の加熱アイテムが実行される)
             executeHeating(itemId);
 
         } else {
+            // (ID 13(初回) は上で処理されたので、ここはID 13(2回目以降)や他のアイテムが実行される)
             const effects = details.effects || {};
             applyEffects(effects);
             if (details.maxUses) {
@@ -828,11 +830,14 @@ export default function SimulationPage() {
             }
             setMessage(`${details.name}を使用した。${formatEffects(effects)}`);
         }
+        // ▲▲▲ 【修正ここまで】 ▲▲▲
+
 
         if (details.category === 'hygiene' && details.id !== 5) {
             setUsedHygieneItems(prev => [...prev, itemId]);
         }
     };
+    // ▲▲▲ 修正ここまで ▲▲▲
 
 
     // --- 水飲みロジック (変更なし) ---
@@ -848,15 +853,24 @@ export default function SimulationPage() {
         setMessage(`水を500ml飲んだ。${formatEffects(effects)}`);
     };
 
-    // --- インベントリ表示用 (変更なし) ---
+    // ▼▼▼ 【修正】 インベントリ表示用 (ID 23: カセットボンベをソート) ▼▼▼
     const categorizedInventory = useMemo(() => {
         const grouped: Record<string, InventoryItem[]> = { food: [], hygiene: [], lifeline: [] };
         inventory.forEach(invItem => {
             const details = getItemDetails(invItem.id);
             if (details) { grouped[details.category]?.push(invItem); }
         });
+        
+        // ★ カセットボンベ(ID: 23)を生活用品の先頭にソート
+        grouped.lifeline.sort((a, b) => {
+            if (a.id === 23 && b.id !== 23) return -1; // ID 23 を先頭に
+            if (a.id !== 23 && b.id === 23) return 1;  // ID 23 を先頭に
+            return a.id - b.id; // それ以外はID順
+        });
+
         return grouped;
     }, [inventory]);
+    // ▲▲▲ 修正ここまで ▲▲▲
 
     const categoryNames: { [key in Item['category'] | 'other']: string } = { food: '食料・水', hygiene: '衛生用品', lifeline: '生活用品', other: 'その他' };
 
@@ -895,9 +909,16 @@ export default function SimulationPage() {
                 <main className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-grow min-h-0">
                     {/* (変更なし) キャラクター・メッセージ欄 */}
                     <div className="lg:col-span-2 flex flex-col items-center justify-between min-h-0">
+                        
+                        {/* ▼▼▼ 【修正】 体調不良で画像変更 ▼▼▼ */}
                         <div className="flex-grow flex items-center justify-start relative pt-24">
-                            <img src="/images/my-character.png" alt="キャラクター" className="drop-shadow-2xl max-h-[55vh] ml-50" />
+                            <img 
+                                src={isSick ? "/images/体調不良.png" : "/images/my-character.png"} 
+                                alt="キャラクター" 
+                                className="drop-shadow-2xl max-h-[55vh] ml-50" 
+                            />
                         </div>
+                        {/* ▲▲▲ 修正ここまで ▲▲▲ */}
 
                         <div className="bg-[#F9F6F0] w-full max-w-2xl mx-auto px-6 py-4 rounded-lg shadow-lg text-center border-2 border-[#E9DDCF] flex items-center justify-center gap-4 h-36">
                             <p className="text-xl font-semibold flex-grow whitespace-pre-wrap">{message}</p>
@@ -905,7 +926,7 @@ export default function SimulationPage() {
                         </div>
 
                     </div>
-                    {/* (変更なし) インベントリ欄 */}
+                    {/* ▼▼▼ 【修正】 インベントリ欄 (表示ロジック変更) ▼▼▼ */}
                     <div className="bg-[#F9F6F0] p-6 rounded-2xl shadow-md border-2 border-[#E9DDCF] flex flex-col min-h-0">
                         <h2 className="text-2xl font-bold mb-4 text-center flex-shrink-0">備蓄品</h2>
                         <div className="space-y-4 flex-grow overflow-y-auto pr-2">
@@ -936,18 +957,23 @@ export default function SimulationPage() {
                                                         <div className="flex items-center justify-between">
                                                             <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center p-1"><img src={details.image} alt={details.name} className="max-w-full max-h-full object-contain" /></div>
                                                             <p className="font-semibold flex-grow mx-2 text-sm">{details.name}</p>
+                                                            
+                                                            {/* ▼▼▼ 【修正】 ID 8, 28, 33 を「回」表記から「x 数量」表記に変更 ▼▼▼ */}
                                                             <div className="text-lg font-bold text-right">
-                                                                {(details.id === 6 || details.id === 23 || details.id === 28 || details.id === 8 || details.id === 33) ? ( // usesで管理
+                                                                {(details.id === 6 || details.id === 23) ? ( // usesで管理 (ID 8, 28, 33 を除外)
                                                                     <>{invItem.uses}<span className="text-xs">回</span></>
                                                                 ) : (details.maxUses && invItem.quantity === 1 && ![30, 29, 31, 32].includes(details.id)) ? ( // uses管理(単数)
                                                                     <>{invItem.uses}<span className="text-xs">{details.id === 25 ? '個' : '回'}</span></>
-                                                                 ) : ( // 数量で管理
+                                                                 ) : ( // 数量で管理 (ID 8, 28, 33 はここに含まれる)
                                                                     <>x {invItem.quantity}</>
                                                                 )}
+                                                                {/* (ID 8, 28, 33はmaxUsesがないので、以下の条件にはマッチしない) */}
                                                                 {details.maxUses && invItem.quantity > 1 && ![6, 8, 23, 28, 30, 29, 31, 32, 33].includes(details.id) && (
                                                                     <span className="text-xs text-gray-500 ml-1">(残{invItem.uses})</span>
                                                                 )}
                                                             </div>
+                                                            {/* ▲▲▲ 修正ここまで ▲▲▲ */}
+
                                                         </div>
                                                         { ![6, 8, 9, 24, 28, 29, 30, 31, 32, 33].includes(details.id) && ( // イベント用・自動消費アイテムはボタン非表示
                                                             <div className="mt-2 space-y-2">
@@ -1005,6 +1031,7 @@ export default function SimulationPage() {
                             </button>
                         </div>
                     </div>
+                    {/* ▲▲▲ 修正ここまで ▲▲▲ */}
                 </main>
             </div>
 
@@ -1053,25 +1080,48 @@ export default function SimulationPage() {
                 }}
             />
 
+            {/* ▼▼▼ 【修正】 WrapModal (onCloseのロジック変更) ▼▼▼ */}
             <WrapModal
                 isOpen={isWrapModalOpen}
                 onClose={() => {
                     setIsWrapModalOpen(false);
                     
-                    executeHeating(13); 
+                    if (retortFoodAction === 'heated') {
+                        // 「加熱する」が押された場合
+                        executeHeating(13); 
+                    
+                    } else if (retortFoodAction === 'raw') {
+                        // 「そのまま」が押された場合
+                        const details = getItemDetails(13);
+                        if(details) {
+                            const effects = details.effects || {};
+                            applyEffects(effects);
+                            if (details.maxUses) {
+                                consumeItem(13, 'uses', 1);
+                            } else {
+                                consumeItem(13, 'quantity', 1);
+                            }
+                            // executeHeatingは内部でsetMessageするので、"raw"の場合だけここでセット
+                            setMessage(`${details.name}を使用した。${formatEffects(effects)}`);
+                        }
+                    }
                     
                     const hasWrap = inventory.some(i => i.id === 26);
                     if (hasWrap) {
                         const wrapEffect: Effect = { hygiene: 4 };
                         applyEffects(wrapEffect);
+                        // setMessageが上書きされないよう、関数型アップデートで追記する
                         setMessage(prev => prev + `\nラップを使ったので衛生を保てた。${formatEffects(wrapEffect)}`);
                     } else {
                         const wrapEffect: Effect = { hygiene: -4 };
                         applyEffects(wrapEffect);
                         setMessage(prev => prev + `\nラップがない...食器が汚れてしまった。${formatEffects(wrapEffect)}`);
                     }
+
+                    setRetortFoodAction(null); // アクションをリセット
                 }}
             />
+            {/* ▲▲▲ 修正ここまで ▲▲▲ */}
         </div>
     );
 }
