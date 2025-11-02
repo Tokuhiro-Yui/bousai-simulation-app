@@ -3,8 +3,11 @@
 // ▼▼▼ "useMemo" と "useRef" を 'react' からインポートするよう修正 ▼▼▼
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { initializeApp, getApps } from "firebase/app";
-import { getFirestore, collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+// ▼▼▼ インポートを追加・変更 ▼▼▼
+import { getFirestore, collection, getDocs, query, orderBy, limit, where, doc, getDoc } from "firebase/firestore"; // ★ where, doc, getDoc を追加
+import { db } from '@/lib/firebase'; // ★ db をインポート
+import { useAuth } from '@/context/AuthContext'; // ★ AuthContext をインポート
+// ▲▲▲ ここまで ▲▲▲
 import { type Item, type Effect, allItems, type HeatingCost } from '../data/items';
 import PortableToiletModal from '../components/PortableToiletModal';
 import DisasterDialModal from '../components/DisasterDialModal';
@@ -14,17 +17,7 @@ import RollingStockModal from '../components/RollingStockModal';
 import RetortGohanModal from '../components/RetortGohanModal';
 import WrapModal from '../components/WrapModal';
 
-// --- Firebase設定 (変更なし) ---
-const firebaseConfig = {
-    apiKey: "AIzaSyCfhxIYHfNNHxwgXyyvMhTgDJ3pydZL6c8",
-    authDomain: "bousaibitiku-2684a.firebaseapp.com",
-    projectId: "bousaibitiku-2684a",
-    storageBucket: "bousaibitiku-2684a.firebasestorage.app",
-    messagingSenderId: "1088804086098",
-    appId: "1:1088804086098:web:8054fea7c39dcd13ac9a8b"
-};
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+// --- Firebase設定 (db と app の定義は lib/firebase.ts に移したので削除) ---
 
 
 // --- 型定義 (変更なし) ---
@@ -98,7 +91,10 @@ export default function SimulationPage() {
     const [turnCount, setTurnCount] = useState(0);
     const [message, setMessage] = useState("データを読み込んでいます...");
     const [isGameOver, setIsGameOver] = useState(false);
-    const router = useRouter();
+    // ▼▼▼ useAuthフックでユーザー情報を取得 ▼▼▼
+    const { user, isLoading: isAuthLoading } = useAuth(); // ★
+    const router = useRouter(); // ★ routerの定義をこちらに移動
+    // ▲▲▲ ここまで ▲▲▲
     const [totalWater, setTotalWater] = useState(0);
     const [isSick, setIsSick] = useState(false);
     const [gameOverReason, setGameOverReason] = useState("");
@@ -209,12 +205,36 @@ export default function SimulationPage() {
         });
     };
 
+    // ▼▼▼ ページ保護機能を追加 ▼▼▼
+    useEffect(() => {
+        if (!isAuthLoading && !user) {
+          // 認証読み込みが完了していて、かつユーザーがいない場合
+          router.push('/'); // ログインページ（トップ）に戻す
+        }
+    }, [user, isAuthLoading, router]);
+    // ▲▲▲ ここまで ▲▲▲
+
     // (変更なし)
     useEffect(() => {
         const initializeSimulation = async () => {
+            // ▼▼▼ ユーザー情報が読み込めるまで待つ ▼▼▼
+            if (!user) {
+                // user がまだ null の場合は、読み込みを保留
+                return;
+            }
+            // ▲▲▲ ここまで ▲▲▲
+
             setIsLoading(true);
             try {
-                const q = query(collection(db, "userSelections"), orderBy("createdAt", "desc"), limit(1));
+                // ▼▼▼ クエリを「自分のIDに一致する最新の1件」に変更 ▼▼▼
+                const q = query(
+                    collection(db, "userSelections"), 
+                    where("userId", "==", user.uid), // ★ ログイン中のユーザーIDで絞り込み
+                    orderBy("createdAt", "desc"), 
+                    limit(1)
+                );
+                // ▲▲▲ ここまで ▲▲▲
+
                 const querySnapshot = await getDocs(q);
                 if (querySnapshot.empty) {
                     setMessage("保存された備蓄品データがありません。");
@@ -251,8 +271,12 @@ export default function SimulationPage() {
             }
         };
 
-        initializeSimulation();
-    }, []);
+        // ▼▼▼ 認証読み込み中(isAuthLoading)でないことを確認してから実行 ▼▼▼
+        if (!isAuthLoading) {
+            initializeSimulation();
+        }
+        // ▲▲▲ 実行トリガーを [user, isAuthLoading] に変更 ▲▲▲
+    }, [user, isAuthLoading]); // ★
 
     // (変更なし) ターン進行ロジック
     useEffect(() => {
@@ -956,7 +980,11 @@ export default function SimulationPage() {
 
 
     // --- レンダリング (JSX) ---
-    if (isLoading) { return <div className="bg-[#F3EADF] min-h-screen flex items-center justify-center text-2xl text-[#5C4033]">データを読み込んでいます...</div>; }
+    // ▼▼▼ 認証読み込み中（isAuthLoading）の場合の表示を追加 ▼▼▼
+    if (isLoading || isAuthLoading || !user) { 
+        return <div className="bg-[#F3EADF] min-h-screen flex items-center justify-center text-2xl text-[#5C4033]">データを読み込んでいます...</div>; 
+    }
+    // ▲▲▲ ここまで ▲▲▲
 
     return (
         // (変更なし)
@@ -1021,7 +1049,7 @@ export default function SimulationPage() {
                                                 <div className="bg-white p-3 rounded-lg shadow-sm">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-3">
-                                                            <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center p-1"><img src="/images/water.png" alt="水" className="max-w-full max-h-full object-contain" /></div>
+                                                            <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center p-1"><img src="/images/水.png" alt="水" className="max-w-full max-h-full object-contain" /></div>
                                                             <div><p className="font-bold text-base">水</p><p className="text-xl font-bold">{totalWater}<span className="text-xs ml-1">ml</span></p></div>
                                                         </div>
                                                         <button onClick={handleDrinkWater} disabled={isResolvingTurn || isGameOver} className="text-sm bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 disabled:bg-gray-400">飲む</button>
@@ -1196,7 +1224,7 @@ export default function SimulationPage() {
                     if (hasWrap) {
                         const wrapEffect: Effect = { hygiene: 4 };
                         applyEffects(wrapEffect);
-                        // setMessageが上書きされないよう、関数型アップデートで追記する
+                        // setMessageが上書きされないよう、関数型アップデートで追記
                         setMessage(prev => prev + `\nラップを使ったので衛生を保てた。${formatEffects(wrapEffect)}`);
                     } else {
                         const wrapEffect: Effect = { hygiene: -4 };

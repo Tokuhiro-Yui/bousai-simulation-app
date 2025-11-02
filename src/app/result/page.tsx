@@ -1,4 +1,5 @@
 'use client';
+
 // ▼▼▼▼▼ このブロックを貼り付ける ▼▼▼▼▼
 interface PlayerStatus {
   satiety: number;
@@ -19,6 +20,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Lightbulb } from 'lucide-react';
 import { allItems } from '../data/items';
+// ▼▼▼ インポートを追加 ▼▼▼
+import { useAuth } from '@/context/AuthContext'; // ★ AuthContext をインポート
 
 // ▼▼▼ recommendedItems を更新 ▼▼▼
 const recommendedItems = [
@@ -97,17 +100,51 @@ export default function ResultPage() {
   const [resultData, setResultData] = useState<ResultData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  
+  // ▼▼▼ useAuthフックでユーザー情報を取得 ▼▼▼
+  const { user, isLoading: isAuthLoading } = useAuth(); // ★
+  // ▲▲▲ ここまで ▲▲▲
+
+  // ▼▼▼ ページ保護機能を追加 ▼▼▼
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+      // 認証読み込みが完了していて、かつユーザーがいない場合
+      router.push('/'); // ログインページ（トップ）に戻す
+    }
+  }, [user, isAuthLoading, router]);
+  // ▲▲▲ ここまで ▲▲▲
 
   useEffect(() => {
+    // ▼▼▼ ログイン状態が確認できてから実行 ▼▼▼
+    if (isAuthLoading) {
+        return; // 認証状態の読み込みが終わるまで待機
+    }
+    
     const storedResult = sessionStorage.getItem('simulationResult');
     if (storedResult) {
       setResultData(JSON.parse(storedResult));
     }
     setIsLoading(false);
-  }, []);
+    // ▲▲▲ ここまで ▲▲▲
+  }, [isAuthLoading]); // ★ isAuthLoading を依存配列に追加
 
-  if (isLoading) { return <div className="bg-slate-50 min-h-screen flex items-center justify-center text-2xl text-gray-700">結果を読み込んでいます...</div>; }
-  if (!resultData) { return ( <div className="bg-slate-50 min-h-screen flex flex-col items-center justify-center text-2xl text-gray-700"> <p>シミュレーションデータが見つかりません。</p> <button onClick={() => router.push('/')} className="mt-4 bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-700 transition-colors duration-300 text-lg shadow-md">トップページに戻る</button> </div> ); }
+  // ▼▼▼ 認証読み込み中（isAuthLoading）の場合の表示を追加 ▼▼▼
+  if (isLoading || isAuthLoading || !user) { 
+      return <div className="bg-slate-50 min-h-screen flex items-center justify-center text-2xl text-gray-700">結果を読み込んでいます...</div>; 
+  }
+  // ▲▲▲ ここまで ▲▲▲
+
+  if (!resultData) { 
+      return ( 
+          <div className="bg-slate-50 min-h-screen flex flex-col items-center justify-center text-2xl text-gray-700"> 
+              <p>シミュレーションデータが見つかりません。</p> 
+              {/* ▼▼▼ 「トップページに戻る」ボタンの行き先を '/' に変更 ▼▼▼ */}
+              <button onClick={() => router.push('/')} className="mt-4 bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-700 transition-colors duration-300 text-lg shadow-md">
+                  トップページに戻る
+              </button> 
+          </div> 
+      ); 
+  }
 
   const { '不足したアイテム': lackingItems, gaugeHistory, selectedItems, turnCount, totalTurns } = resultData;
   const finalGauges = gaugeHistory[gaugeHistory.length - 1];
@@ -307,7 +344,7 @@ export default function ResultPage() {
 
         <div className="text-center mt-10">
             <button 
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/stockpile')}
                 className="bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-700 transition-colors duration-300 text-lg shadow-md">
                 もう一度備蓄品を選ぶ
             </button>

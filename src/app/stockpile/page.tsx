@@ -3,8 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useState, useMemo, useEffect } from 'react';
 import { Plus, Minus, CheckCircle2, Loader2 } from 'lucide-react';
-import { initializeApp, getApps } from "firebase/app";
+// ▼▼▼ インポートを追加 ▼▼▼
 import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useAuth } from '@/context/AuthContext'; // ★ AuthContext をインポート
+import { db } from '@/lib/firebase'; // ★ db をインポート
+// ▲▲▲ ここまで ▲▲▲
 import { type Item, allItems, type Effect, type HeatingCost } from '../data/items'; 
 
 // ▼▼▼ 【追加】 アイテムの量/単位マップ ▼▼▼
@@ -22,17 +25,7 @@ const itemAmountMap: { [key: number]: string } = {
   6:'5回分',//トイレ 
   18:'500ml'  //飲み物
 };
-// --- Firebase設定 (変更なし) ---
-const firebaseConfig = {
-    apiKey: "AIzaSyCfhxIYHfNNHxwgXyyvMhTgDJ3pydZL6c8",
-    authDomain: "bousaibitiku-2684a.firebaseapp.com",
-    projectId: "bousaibitiku-2684a",
-    storageBucket: "bousaibitiku-2684a.firebasestorage.app",
-    messagingSenderId: "1088804086098",
-    appId: "1:1088804086098:web:8054fea7c39dcd13ac9a8b"
-};
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const db = getFirestore(app);
+// --- Firebase設定 (db と app の定義は lib/firebase.ts に移したので削除) ---
 
 // --- 型定義 (変更なし) ---
 type SelectedItem = { id: number; quantity: number; };
@@ -97,6 +90,10 @@ export default function Home() {
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
+  // ▼▼▼ useAuthフックでユーザー情報を取得 ▼▼▼
+  const { user, isLoading: isAuthLoading } = useAuth(); // ★
+  // ▲▲▲ ここまで ▲▲▲
+
   const totalSelectedCount = useMemo(() => selectedItems.reduce((sum, item) => sum + item.quantity, 0), [selectedItems]);
   
   // (変更なし)
@@ -107,6 +104,15 @@ export default function Home() {
     // 手回し充電ラジオ(id: 9)を除外
     return baseList.filter(item => item.id !== 9);
   }, [activeCategory]);
+
+  // ▼▼▼ ページ保護機能を追加 ▼▼▼
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+      // 認証読み込みが完了していて、かつユーザーがいない場合
+      router.push('/'); // ログインページ（トップ）に戻す
+    }
+  }, [user, isAuthLoading, router]);
+  // ▲▲▲ ここまで ▲▲▲
 
   const handleItemClick = (item: Item) => {
     setActiveItem(item);
@@ -136,14 +142,18 @@ export default function Home() {
   };
   
   const handleConfirm = async () => {
-    if (selectedItems.length === 0 || isSaving) return;
+    // ▼▼▼ ユーザーがいない場合は実行しないよう変更 ▼▼▼
+    if (selectedItems.length === 0 || isSaving || !user) return; // ★ !user を追加
     setIsSaving(true);
     try {
+      // ▼▼▼ 保存するデータに userId を追加 ▼▼▼
       await addDoc(collection(db, "userSelections"), {
+        userId: user.uid, // ★ ログインしているユーザーのIDを追加
         items: selectedItems,
         totalCount: totalSelectedCount,
         createdAt: serverTimestamp()
       });
+      // ▲▲▲ ここまで ▲▲▲
       router.push('/simulation');
     } catch (e) {
       console.error("Error adding document: ", e);
@@ -158,6 +168,16 @@ export default function Home() {
       setActiveItem(filteredItems[0]);
     }
   }, [activeItem, filteredItems]);
+
+  // ▼▼▼ 認証読み込み中（isAuthLoading）の場合の表示を追加 ▼▼▼
+  if (isAuthLoading || !user) {
+    return (
+      <div className="bg-[#F3EADF] min-h-screen flex items-center justify-center text-2xl text-[#5C4033]">
+        読み込み中...
+      </div>
+    );
+  }
+  // ▲▲▲ ここまで ▲▲▲
 
   return (
     <div className="bg-[#F3EADF] min-h-screen font-sans text-[#5C4033]">
