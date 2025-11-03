@@ -183,7 +183,7 @@ export default function Home() {
     <div className="bg-[#F3EADF] min-h-screen font-sans text-[#5C4033]">
       <div className="container mx-auto max-w-6xl h-screen flex flex-col p-4 sm:p-8">
         <header className="text-center mb-8 flex-shrink-0">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-wider">備蓄を選択してください</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-wider">3日分の備蓄を選択してください</h1>
         </header>
 
         <main className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-grow min-h-0">

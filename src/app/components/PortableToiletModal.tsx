@@ -48,7 +48,7 @@ const steps: Step[] = [
   {
     title: 'ポイント1：布テープ',
     description: '誤ってトイレを流してしまわないように、流すレバーやボタンにテープを貼り、止めておく',
-    image: '/images/使用禁止.HEIC' // 仮の画像パス
+    image: '/images/使用禁止.JPG' // 仮の画像パス
   },
   {
     title: 'ポイント2：使い捨て手袋',

@@ -67,7 +67,7 @@ const recommendedItems = [
     { id: 'item_29', category: 'lifeline', name: '乾電池', image: '/images/乾電池.png', recommendedQuantity: '1', unit: 'セット', description: '単1～単4まで', importance: '懐中電灯などを用意しても電池がなければ使うことができません。また、電池は突然切れるおそれもあります。災害時は電池の使用頻度も高まるので、少し多めに買いそろえ、使いながら買い足す、日常備蓄（ローリングストック）の一環として備えておきましょう。', simulated: true },
     { id: 'item_30', category: 'lifeline', name: '布製ガムテープ', image: '/images/布製ガムテープ.png', recommendedQuantity: '1', unit: '個', description: '補修や固定に', importance: '物の補修、固定、メモ書き、応急手当など、万能なテープ。', simulated: true },
     { id: 'item_31', category: 'lifeline', name: '給水袋', image: '/images/給水袋.png', recommendedQuantity: '1', unit: '袋', description: '水の運搬に', importance: '水道が復旧しない状況で、給水車に水をもらいに行くときに活用します。', simulated: true },
-    { id: 'item_32', category: 'lifeline', name: 'リュックサック', image: '/images/リュック.png', recommendedQuantity: '1', unit: '個', description: '水の運搬に', importance: '断水時には給水拠点などから水を運ぶ必要も出てきます。もし災害時にエレベーターが止まり、階段を使って運ばないといけないときは、リュックに大きめのポリ袋を被せ、その中に水を入れて運べば、ポリタンクよりも楽に運べます。', simulated: false },
+    { id: 'item_32', category: 'lifeline', name: 'リュックサック', image: '/images/リュック.png', recommendedQuantity: '1', unit: '個', description: '水の運搬に', importance: '断水時には給水拠点などから水を運ぶ必要も出てきます。もし災害時にエレベーターが止まり、階段を使って運ばないといけないときは、リュックに大きめのポリ袋を被せ、その中に水を入れて運べば、ポリタンクよりも楽に運べます。', simulated: true },
     { id: 'item_33', category: 'lifeline', name: '使い捨てカイロ', image: '/images/カイロ.png', recommendedQuantity: '6', unit: '個', description: '冬の寒さ対策', importance: '寒いときの定番「カイロ」。冬の外出時、かばんの中に入れておくと、エレベーターに閉じ込められたときなどでも体を温めて生命維持につながります。カイロでレトルト食材を挟み、アルミブランケットやタオルで包めば、レトルト食品を温めることもできます。', simulated: true },
 
     // ▼▼▼ simulated: false のアイテム (id: 9 を復元) ▼▼▼

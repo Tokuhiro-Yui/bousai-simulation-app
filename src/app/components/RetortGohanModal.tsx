@@ -19,22 +19,22 @@ const steps: Step[] = [
   {
     title: 'ステップ1',
     description: '耐熱のポリ袋にパックごはんを移して、なるべく空気を抜き、袋の口をしっかり閉める',
-    image: '/images/gohan_guide/step1.png' // ※画像パスはご用意ください
+    image: '/images/レトルトご飯1.jpg' // ※画像パスはご用意ください
   },
   {
     title: 'ステップ2',
     description: '水を張った鍋の底に耐熱皿をひく（鍋底に袋が直接当たるのを防ぐため）',
-    image: '/images/gohan_guide/step2.png' // ※画像パスはご用意ください
+    image: '/images/レトルトご飯2.jpg' // ※画像パスはご用意ください
   },
   {
     title: 'ステップ3',
     description: '袋が鍋の淵に当たらないようにご飯を入れて、10分加熱 (途中でひっくり返すとムラがなくなる)',
-    image: '/images/gohan_guide/step3.png' // ※画像パスはご用意ください
+    image: '/images/レトルトご飯3.jpg' // ※画像パスはご用意ください
   },
   {
     title: 'ポイント：ポリ袋の利点',
     description: '鍋が汚れずお湯を繰り返し使える（節水）。また、袋が小さい分、少ない水で早く温まる（燃料節約）。',
-    image: '/images/gohan_guide/point1.png' // ※画像パスはご用意ください
+    image: '/images/レトルトご飯4.JPG' // ※画像パスはご用意ください
   }
 ];
 
