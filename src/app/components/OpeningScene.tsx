@@ -5,7 +5,7 @@ interface OpeningSceneProps {
   onComplete: () => void;
 }
 
-// 1. ユーザー指定の新しいストーリーに差し替え
+// ストーリーテキスト (変更なし)
 const storyLines = [
   "202X年、冬。",
   "ありふれた日常が、その日、音を立てて崩れ去ることを、まだ誰も知らなかった。",
@@ -54,72 +54,87 @@ const storyLines = [
 
 
 const OpeningScene: React.FC<OpeningSceneProps> = ({ onComplete }) => {
-  // Stateを「完了した行の配列」と「現在タイピング中の行」に分割
   const [completedLines, setCompletedLines] = useState<string[]>([]);
   const [currentTypingText, setCurrentTypingText] = useState('');
   const [lineIndex, setLineIndex] = useState(0);
   const [showButton, setShowButton] = useState(false);
-
-  // 2. 自動スクロール用のRefを追加
   const storyContainerRef = useRef<HTMLDivElement>(null);
+  
+  // ▼▼▼ ハイドレーションエラー対策 ▼▼▼
+  // 1. マウント状態を管理するStateを追加
+  const [isMounted, setIsMounted] = useState(false);
+
+  // 2. このuseEffectはクライアント側でのみ（ハイドレーション後に）実行される
+  useEffect(() => {
+    // コンポーネントがマウントされたことを示す
+    setIsMounted(true);
+  }, []); // 空の依存配列で、マウント時に一度だけ実行
+  // ▲▲▲ ここまで ▲▲▲
 
   const TYPING_SPEED = 50;
   const LINE_PAUSE = 800; // 行間のポーズ
 
   useEffect(() => {
-    if (lineIndex >= storyLines.length) {
-      setShowButton(true);
-      return; // 全ての行が完了したので処理を終了
+    // ▼▼▼ isMountedがtrueになるまで（＝ハイドレーション完了まで）待機 ▼▼▼
+    if (!isMounted || lineIndex >= storyLines.length) {
+      if (isMounted && lineIndex >= storyLines.length) {
+        setShowButton(true);
+      }
+      return; // マウント前か、全行完了なら処理を終了
     }
+    // ▲▲▲ ここまで ▲▲▲
 
     let charIndex = 0;
     const currentLine = storyLines[lineIndex].trim();
+    
+    // ▼▼▼ タイムアウトIDを保持する変数を追加 (前回の修正) ▼▼▼
+    let linePauseTimeout: NodeJS.Timeout | null = null;
 
     const typingInterval = setInterval(() => {
       if (charIndex < currentLine.length) {
-        // 現在の行をタイピング中
         setCurrentTypingText(currentLine.substring(0, charIndex + 1));
         charIndex++;
       } else {
-        // 行のタイピングが完了
         clearInterval(typingInterval);
-        setCompletedLines(prev => [...prev, currentLine]); // 完了リストに追加
-        setCurrentTypingText(''); // タイピング中の行をリセット
+        setCompletedLines(prev => [...prev, currentLine]);
+        setCurrentTypingText('');
 
-        // 少し待ってから次の行へ
-        setTimeout(() => {
+        // ▼▼▼ タイムアウトIDを代入 (前回の修正) ▼▼▼
+        linePauseTimeout = setTimeout(() => {
           setLineIndex(prev => prev + 1);
         }, LINE_PAUSE);
       }
     }, TYPING_SPEED);
 
-    // コンポーネントが消える時にインターバルも消すクリーンアップ処理
     return () => {
       clearInterval(typingInterval);
+      // ▼▼▼ setTimeoutもクリア (前回の修正) ▼▼▼
+      if (linePauseTimeout) {
+        clearTimeout(linePauseTimeout);
+      }
     };
-  }, [lineIndex]); // lineIndexが変わるたびにこのエフェクトが実行される
+  
+  // ▼▼▼ 依存配列に isMounted を追加 ▼▼▼
+  }, [lineIndex, isMounted]); // lineIndex または isMounted が変わるたびに実行
+  // ▲▲▲ ここまで ▲▲▲
 
-  // 3. 自動スクロール用のuseEffectを追加
+
   useEffect(() => {
-    // テキストが更新されるたびに、コンテナの最下部にスクロールする
     if (storyContainerRef.current) {
       const container = storyContainerRef.current;
       container.scrollTop = container.scrollHeight;
     }
-    // 完了した行か、タイピング中のテキストが変わるたびに実行
   }, [completedLines, currentTypingText]);
 
   return (
     <div className={styles.container}>
-      {/* 4. Refをdivにアタッチ */}
       <div className={styles.storyContainer} ref={storyContainerRef}>
-        {/* 完了した行をそれぞれ別のpタグで表示 */}
         {completedLines.map((line, index) => (
           <p key={index} className={styles.storyText}>{line}</p>
         ))}
 
-        {/* 現在タイピング中の行を表示 */}
-        {lineIndex < storyLines.length && (
+        {/* ▼▼▼ isMounted が true になるまでカーソルも非表示にする ▼▼▼ */}
+        {isMounted && lineIndex < storyLines.length && (
           <p className={styles.storyText}>
             {currentTypingText}
             {!showButton && <span className={styles.cursor}></span>}

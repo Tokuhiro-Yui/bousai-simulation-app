@@ -169,6 +169,7 @@ export default function SimulationPage() {
         }));
     };
 
+
     // (変更なし)
     const consumeItem = (itemId: number, consumeType: 'uses' | 'quantity', amount: number) => {
         setInventory(prevInventory => {
@@ -177,6 +178,9 @@ export default function SimulationPage() {
 
             if (itemIndex > -1) {
                 const item = { ...newInventory[itemIndex] };
+                // ▼▼▼ 修正1: details をここで定義 ▼▼▼
+                const details = getItemDetails(itemId); 
+
                 if (consumeType === 'quantity') {
                     item.quantity -= amount;
                 } else {
@@ -187,23 +191,43 @@ export default function SimulationPage() {
                     item.uses -= amount;
                 }
 
-                const details = getItemDetails(itemId);
+                // ▼▼▼ 修正2: このブロック全体を削除 ▼▼▼
+                /*
+                const details = getItemDetails(itemId); // (これは 修正1 で移動)
                 if (details?.maxUses && item.uses !== undefined && item.uses <= 0) {
                     item.quantity -= 1;
                     if (item.quantity > 0) {
-                        item.uses = details.maxUses;
+                        item.uses = details.maxUses; // <-- 
+                    }
+                }
+                */
+                // ▲▲▲ 修正ここまで ▲▲▲
+
+                // ▼▼▼ 修正3: アイテム削除ロジックを明確化 ▼▼▼
+                let keepItem = true;
+                if (details?.maxUses) {
+                    // maxUses があるアイテム (トイレなど) は uses が尽きたら削除
+                    if (item.uses !== undefined && item.uses <= 0) {
+                        keepItem = false;
+                    }
+                } else {
+                    // maxUses がないアイテム (缶詰など) は quantity が尽きたら削除
+                    if (item.quantity <= 0) {
+                        keepItem = false;
                     }
                 }
 
-                if (item.quantity > 0) {
+                if (keepItem) {
                     newInventory[itemIndex] = item;
                 } else {
-                    newInventory.splice(itemIndex, 1);
+                    newInventory.splice(itemIndex, 1); // インベントリから削除
                 }
+                // ▲▲▲ 修正ここまで ▲▲▲
             }
             return newInventory;
         });
     };
+    // (変更なし)
 
     // ▼▼▼ ページ保護機能を追加 ▼▼▼
     useEffect(() => {
