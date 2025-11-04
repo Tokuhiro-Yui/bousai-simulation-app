@@ -1067,19 +1067,38 @@ export default function SimulationPage() {
                                                             <div className="w-12 h-12 bg-gray-100 rounded-md flex items-center justify-center p-1"><img src={details.image} alt={details.name} className="max-w-full max-h-full object-contain" /></div>
                                                             <p className="font-semibold flex-grow mx-2 text-sm">{details.name}</p>
                                                             
-                                                            {/* ▼▼▼ 【修正】 ID 8, 28, 33 を「回」表記から「x 数量」表記に変更 ▼▼▼ */}
+                                                           {/* ▼▼▼ 【修正】 maxUsesを持つアイテムの表示ロジックを変更 ▼▼▼ */}
                                                             <div className="text-lg font-bold text-right">
-                                                                {(details.id === 6 || details.id === 23) ? ( // usesで管理 (ID 8, 28, 33 を除外)
-                                                                    <>{invItem.uses}<span className="text-xs">回</span></>
-                                                                ) : (details.maxUses && invItem.quantity === 1 && ![30, 29, 31, 32].includes(details.id)) ? ( // uses管理(単数)
-                                                                    <>{invItem.uses}<span className="text-xs">{details.id === 25 ? '個' : '回'}</span></>
-                                                                 ) : ( // 数量で管理 (ID 8, 28, 33 はここに含まれる)
-                                                                    <>x {invItem.quantity}</>
-                                                                )}
-                                                                {/* (ID 8, 28, 33はmaxUsesがないので、以下の条件にはマッチしない) */}
-                                                                {details.maxUses && invItem.quantity > 1 && ![6, 8, 23, 28, 30, 29, 31, 32, 33].includes(details.id) && (
-                                                                    <span className="text-xs text-gray-500 ml-1">(残{invItem.uses})</span>
-                                                                )}
+                                                                {(() => {
+                                                                    // 単位マップ:
+                                                                    // ID 10(ウェットティッシュ), 21(歯磨きシート) ,22(ボディシート)-> 枚
+                                                                    // ID 25(フリーズドライ),33(カイロ) -> 個
+                                                                    // ID 6(トイレ), 20(口内洗浄液), 23(ボンベ) -> 回
+                                                                    const unitMap: { [key: number]: string } = {
+                                                                        10: '枚',
+                                                                        21: '枚',
+                                                                        22:'枚',
+                                                                        25: '個',
+                                                                        33:'個',
+                                                                        5:'回',
+                                                                        6: '回',
+                                                                        20: '回',
+                                                                        23: '回',
+                                                                        24:'台',
+
+
+                                                                    };
+                                                                    // 常に総回数(invItem.uses)で表示したいアイテム
+                                                                    const usesBasedItems = [6, 10, 20, 21, 23, 25 ,22 ,33 ,24 ,5];
+
+                                                                    if (details.id && usesBasedItems.includes(details.id)) {
+                                                                        // usesベースのアイテム (例: 6個, 30枚, 9回)
+                                                                        return <>{invItem.uses}<span className="text-xs">{unitMap[details.id] || '回'}</span></>;
+                                                                    } else {
+                                                                        // それ以外は数量 (quantity) ベース (例: x 2)
+                                                                        return <>x {invItem.quantity}</>;
+                                                                    }
+                                                                })()}
                                                             </div>
                                                             {/* ▲▲▲ 修正ここまで ▲▲▲ */}
 

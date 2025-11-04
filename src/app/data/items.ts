@@ -57,7 +57,7 @@ export const allItems: Item[] = [
     { id: 8, name: 'モバイルバッテリー', description: 'スマートフォンの充電に。情報収集や連絡手段の確保に。', image: '/images/モバイルバッテリー.png', category: 'lifeline', effects: {} },
     { id: 9, name: '手回し充電ラジオ', description: '電池がなくても情報収集ができます。', image: '/images/ラジオ.png', category: 'lifeline', effects: {} },
     { id: 23, name: 'カセットボンベ', description: 'コンロの燃料。1本で4回の加熱が可能です。', image: '/images/ガスボンベ.png', category: 'lifeline', effects: {}, maxUses: 4 },
-    { id: 24, 'name': 'LEDランタン', 'description': '停電時の夜の明かり。安全確保と不安の軽減に。', image: '/images/ランタン.png', category: 'lifeline', effects: {} ,resourceAmount: 3 },
+    { id: 24, 'name': 'LEDランタン', 'description': '停電時の夜の明かり。安全確保と不安の軽減に。', image: '/images/ランタン.png', category: 'lifeline', effects: {} ,resourceAmount: 3 ,maxUses: 3},
     { id: 26, name: 'ラップ', description: '食器に被せたり、体に巻いて保温したりと多用途に使えます。', image: '/images/ラップ.png', category: 'lifeline', effects: {} },
     { id: 27, name: 'ポリ袋', description: 'ごみ袋、調理、応急手当など幅広く活躍します。', image: '/images/ポリ袋.png', category: 'lifeline', effects: {} },
     // ▼▼▼ 【修正】 ID 28 (ビニール手袋) の description と maxUses を変更 ▼▼▼
@@ -68,7 +68,7 @@ export const allItems: Item[] = [
     { id: 31, name: '給水袋', description: '給水所で水を受け取る際に必要。折りたためて便利です。', image: '/images/給水袋.png', category: 'lifeline', effects: {} },
     { id: 32, name: 'リュックサック', description: '両手を空けて荷物を運ぶことができます。避難時や水の運搬に。', image: '/images/リュック.png', category: 'lifeline', effects: {} },
     // ▼▼▼ 【修正】 ID 33 (カイロ) の description, maxUses, effects を変更 ▼▼▼
-    { id: 33, name: '使い捨てカイロ', description: '冬の寒さ対策に。体を温めると安心します。', image: '/images/カイロ.png', category: 'lifeline', effects: {} },
+    { id: 33, name: '使い捨てカイロ', description: '冬の寒さ対策に。体を温めると安心します。', image: '/images/カイロ.png', category: 'lifeline', effects: {} ,maxUses: 6},
     // ▲▲▲ 修正ここまで ▲▲▲
 ];
 
