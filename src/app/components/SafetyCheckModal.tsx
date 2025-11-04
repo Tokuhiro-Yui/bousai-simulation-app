@@ -42,7 +42,7 @@ const SafetyCheckModal: React.FC<SafetyCheckModalProps> = ({ isOpen, onClose }) 
           {/* 画像（仮のパス） */}
           <div className="bg-gray-100 rounded-lg h-48 flex items-center justify-center mb-6 flex-shrink-0 w-full p-2">
             <img 
-              src="/images/safety_check_tape.png" // 画像パスは適宜変更してください
+              src="/images/無事.jpg" // 画像パスは適宜変更してください
               alt="布製ガムテープでの安否確認"
               className="max-h-full max-w-full object-contain"
             />

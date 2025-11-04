@@ -180,6 +180,7 @@ export default function Home() {
   // ▲▲▲ ここまで ▲▲▲
 
   return (
+    
     <div className="bg-[#F3EADF] min-h-screen font-sans text-[#5C4033]">
       <div className="container mx-auto max-w-6xl h-screen flex flex-col p-4 sm:p-8">
         <header className="text-center mb-8 flex-shrink-0">
